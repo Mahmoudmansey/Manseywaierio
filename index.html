@@ -494,12 +494,36 @@ admin = كل الصلاحيات، cashier = الطلبات والمطبخ فقط
 مسح=>Clear
 متصل=>Connected
 غير مفعّل=>Not enabled
-اكتب السعر=>Enter the price`.split('\n').map(l=>l.split('=>')).sort((a,b)=>b[0].length-a[0].length);
+اكتب السعر=>Enter the price
+pick عنوان: خيار1, خيار2 — remove: عناصر — add: اسم سعر=>pick Title: option1, option2 — remove: items — add: name price
+سطر ينتهي برقم = صنف، + = إضافة للصنف السابق، بدون رقم = قسم.=>A line ending with a number = item, + = extra for the previous item, no number = category.
+يمسح الطلبات الحالية فقط. المبيعات المسجلة تبقى.=>Clears current orders only. Recorded sales remain.
+إضافة للطلب=>Add to order
+تعذّر الحفظ=>Could not save
+الحفظ غير متاح هنا. استخدم الطباعة ثم اختر «حفظ كـ PDF».=>Saving is not available here. Use Print, then choose “Save as PDF”.
+تم الإلغاء=>Cancelled
+تم التقديم=>Served
+⚪ إعدادات Firebase غير مفعّلة على هذا الجهاز=>⚪ Firebase is not configured on this device
+جاري الاختبار...=>Testing...
+✅ الكتابة والقراءة من الخادم تعملان=>✅ Server read/write works
+⚠ نتيجة غير متطابقة=>⚠ Result mismatch
+timeout (لا يوجد اتصال بالخادم)=>timeout (no server connection)
+🔴 خطأ:=>🔴 Error:
+مشكلة في المزامنة (=>Sync problem (
+قواعد Firestore تمنع الوصول=>Firestore rules deny access
+لا يوجد اتصال أو القاعدة غير مفعلة=>No connection or database not enabled
+قاعدة Firestore غير منشأة=>Firestore database not created
+راجع إعدادات Firebase=>Check Firebase settings
+الصق إعدادات Firebase (firebaseConfig) هنا=>Paste Firebase config here
+الصق إعدادات Firebase كاملة (فيها projectId)=>Paste the full Firebase config (with projectId)
+الطلب في غرفة=>Order in room
+خطأ=>Error`.split('\n').map(l=>l.split('=>')).sort((a,b)=>b[0].length-a[0].length);
 const ENR=[[/منذ (\d+) دقيقة/,'$1 min ago'],[/منذ (\d+) ساعة/,'$1 h ago'],[/(\d+) يوم/,'$1 days']];
-function trTxt(s){if(!/[\u0600-\u06FF]/.test(s))return s;ENR.forEach(r=>{s=s.replace(r[0],r[1])});EN.forEach(a=>{if(s.includes(a[0]))s=s.split(a[0]).join(a[1])});return s}
-function trAll(){const en=ui.lang=='en';document.documentElement.dir=en?'ltr':'rtl';document.documentElement.lang=en?'en':'ar';const b=$('#lg');if(b)b.textContent=en?'ع':'EN';if(!en)return;
-const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){const t=n.parentNode.tagName;if(t=='SCRIPT'||t=='STYLE'||t=='TEXTAREA')continue;const v=trTxt(n.nodeValue);if(v!==n.nodeValue)n.nodeValue=v}
-document.querySelectorAll('[placeholder]').forEach(e=>{e.placeholder=trTxt(e.placeholder)})}
+const ENX=EN.map(a=>[new RegExp('(^|[^\\u0600-\\u06FF])'+a[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?![\\u0600-\\u06FF])','g'),a[1]]);
+function trTxt(s){if(!/[\u0600-\u06FF]/.test(s))return s;ENR.forEach(r=>{s=s.replace(r[0],r[1])});ENX.forEach(a=>{s=s.replace(a[0],(m,p)=>p+a[1])});return s}
+function trIn(root){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){const t=n.parentNode&&n.parentNode.tagName;if(t=='SCRIPT'||t=='STYLE'||t=='TEXTAREA')continue;const v=trTxt(n.nodeValue);if(v!==n.nodeValue)n.nodeValue=v}if(root.querySelectorAll)root.querySelectorAll('[placeholder]').forEach(e=>{e.placeholder=trTxt(e.placeholder)})}
+function trAll(){const en=ui.lang=='en';document.documentElement.dir=en?'ltr':'rtl';document.documentElement.lang=en?'en':'ar';const b=$('#lg');if(b)b.textContent=en?'ع':'EN';if(!en)return;trIn(document.body)}
+new MutationObserver(ms=>{if(ui.lang!='en')return;ms.forEach(m=>{if(m.type=='characterData'){const v=trTxt(m.target.nodeValue);if(v!==m.target.nodeValue)m.target.nodeValue=v}else m.addedNodes.forEach(n=>{if(n.nodeType==3){const v=trTxt(n.nodeValue);if(v!==n.nodeValue)n.nodeValue=v}else if(n.nodeType==1)trIn(n)})})}).observe(document.body,{childList:true,subtree:true,characterData:true});
 async function testFb(){const e=$('#fbs');if(!DB){e.textContent='⚪ إعدادات Firebase غير مفعّلة على هذا الجهاز';return}e.textContent='جاري الاختبار...';try{const t=Date.now(),to=new Promise((_,j)=>setTimeout(()=>j({code:'timeout (لا يوجد اتصال بالخادم)'}),9000));await Promise.race([DB.doc('pos/ping').set({t}),to]);const s=await Promise.race([DB.doc('pos/ping').get({source:'server'}),to]);e.textContent=s.exists&&s.data().t==t?'✅ الكتابة والقراءة من الخادم تعملان':'⚠ نتيجة غير متطابقة'}catch(x){e.textContent='❌ '+(x.code||x.message)}}
 function setDisc(id,t,v){const l=S.tables[id]||[];for(let k=l.length-1;k>=0;k--)if(l[k].disc)l.splice(k,1);const sub=l.reduce((a,i)=>a+(i.void?0:i.price*i.qty),0),amt=t=='%'?Math.round(sub*v)/100:Math.min(v,sub);if(amt>0)l.push({name:t=='%'?'Discount '+v+'%':'Discount',price:-amt,qty:1,note:'',sent:true,disc:1})}
 const roomBal=r=>{let b=0;S.sales.forEach(s=>{(s.pays||[]).forEach(x=>{if(x.room==r)b+=x.amount});if(s.settle&&s.room==r)b-=s.total});return Math.round(b*100)/100};
@@ -551,7 +575,7 @@ if(m.t=='iv'){return`<div class="md"><div><b>سبب الإلغاء</b>${['طلب
 if(m.t=='mv'){return`<div class="md"><div><b>نقل / دمج إلى غرفة</b><input id="mvn" type="number" placeholder="رقم الغرفة" style="margin:8px 0"><div class="btns"><button class="btn" data-act="mvto">نقل / دمج</button><button class="btn s" data-act="close">إغلاق</button></div></div></div>`}
 if(m.t=='rs'){const b=roomBal(m.room);return`<div class="md"><div><b>تسوية غرفة ${esc(m.room)}</b><div class="tot g"><span>المستحق</span><span>${$$(b)}</span></div><div class="btns"><button class="btn" data-act="rsp" data-v="cash">كاش</button><button class="btn" data-act="rsp" data-v="card">كارت</button></div><div class="btns"><button class="btn s" data-act="close">إغلاق</button></div></div></div>`}
 if(m.t=='om'){const mm=S.meta[m.id]||{};return`<div class="md"><div style="padding:0;overflow:hidden"><div style="background:var(--pri);color:var(--on);padding:14px;text-align:center;font-weight:800">${esc(lab(m.id))}</div>${(mm.void?[['ohide','إخفاء']]:[['ocancel',ui.cf?'تأكيد الإلغاء':'إلغاء الطلب'],['ohide','إخفاء'],['ptot','طباعة الإجمالي'],['opay','الدفع'],['odisc','خصم'],['omv','نقل / دمج طاولة'],['rename','تسمية الطلب']]).map(x=>`<button class="btn s" style="width:100%;border-radius:0;border-width:0 0 1px;padding:14px" data-act="${x[0]}">${x[1]}</button>`).join('')}<button class="btn s" style="width:100%;border:0;padding:14px" data-act="close">إغلاق</button></div></div>`}
-if(m.t=='lb'){return`<div class="md"><div><b>تسمية الطلب</b><input id="lb" value="${esc((S.meta[m.id]||{}).label||'')}" placeholder="طاولة 5 / سفري / غرفة 214" style="margin:8px 0"><div class="chips">${['طاولة ','سفري','غرفة '].map(x=>`<button class="chip" data-act="lpre" data-v="${x}">${x.trim()}</button>`).join('')}</div><div class="btns"><button class="btn" data-act="lbsave">حفظ</button><button class="btn d" data-act="odel">${ui.cf?'تأكيد الحذف':'حذف الطلب'}</button></div><div class="btns"><button class="btn s" data-act="close">إغلاق</button></div></div></div>`}
+if(m.t=='lb'){return`<div class="md"><div><b>تسمية الطلب</b><input id="lb" value="${esc(ui.lang=='en'?trTxt((S.meta[m.id]||{}).label||''):(S.meta[m.id]||{}).label||'')}" placeholder="طاولة 5 / سفري / غرفة 214" style="margin:8px 0"><div class="chips">${(ui.lang=='en'?['Takeaway','Room ']:['سفري','غرفة ']).map(x=>`<button class="chip" data-act="lpre" data-v="${x}">${x.trim()}</button>`).join('')}</div><div class="btns"><button class="btn" data-act="lbsave">حفظ</button><button class="btn d" data-act="odel">${ui.cf?'تأكيد الحذف':'حذف الطلب'}</button></div><div class="btns"><button class="btn s" data-act="close">إغلاق</button></div></div></div>`}
 if(m.t=='ex'){return`<div class="md"><div><b style="direction:ltr;display:block">${esc(m.d.name)}</b>${m.d.extras.map((e,i)=>`<label class="x ${m.s.includes(i)?'on':''}" data-act="xt" data-v="${i}"><span>${esc(e.name)}</span><b>+${$$(e.price)}</b></label>`).join('')}<div class="btns"><button class="btn" data-act="exok">إضافة للطلب</button><button class="btn s" data-act="close">إلغاء</button></div></div></div>`}
 const t=sum(cart()),pd=(S.pays[ui.table]||[]).reduce((a,x)=>a+x.amount,0),rem=Math.max(0,t.tot-pd),n=ui.n||1,sh=n>1?Math.round(rem/n*100)/100:rem;return`<div class="md"><div><b>الدفع - ${esc(lab(ui.table))}</b><div class="tot"><span>الإجمالي</span><span>${$$(t.tot)}</span></div>${pd?`<div class="tot"><span>مدفوع</span><span>${$$(pd)}</span></div>`:''}<div class="tot g"><span>المتبقي</span><span>${$$(rem)}</span></div><div class="row"><span>تقسيم على</span><div class="q"><button data-act="nd">−</button><b>${n}</b><button data-act="nu">+</button></div></div><div class="tot g"><span>المبلغ الآن</span><span>${$$(sh)}</span></div><div class="btns"><button class="btn" data-act="paid" data-v="cash">كاش</button><button class="btn" data-act="paid" data-v="card">كارت</button></div><div style="margin-top:10px"><span class="mut">تحميل على حساب الغرفة</span><input id="rm" placeholder="رقم الغرفة" value="${esc((lab(ui.table).match(/(?:غرفة|room)\s*(\S+)/i)||[])[1]||'')}"></div>${ui.rerr?'<p style="color:var(--bad);margin:4px 0">اكتب رقم الغرفة</p>':''}<div class="btns"><button class="btn w" data-act="paid" data-v="room">على الغرفة</button></div><div class="btns"><button class="btn s" data-act="close">رجوع</button></div></div></div>`}
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||/INPUT|SELECT/.test(el.tagName))return;const a=el.dataset.act,v=el.dataset.v,k=+el.dataset.k,l=cart();
@@ -578,7 +602,8 @@ else if(a=='ohide'){S.meta[ui.md.id].hide=1;ui.md=null;save()}
 else if(a=='ptot'){const id=ui.md.id,l2=S.tables[id]||[],t2=sum(l2);ui.md={t:'rc',s:{id:Date.now(),time:Date.now(),table:lab(id),user:(ui.user||{}).name||'',total:t2.tot,pays:[],items:l2.filter(i=>!i.void).map(i=>({name:i.name,qty:i.qty,price:i.price}))}}}
 else if(a=='opay'){ui.table=ui.md.id;ui.n=1;ui.rerr=0;ui.md={t:'pay'}}
 else if(a=='lpre'){$('#lb').value=v;$('#lb').focus();return}
-else if(a=='lbsave'){S.meta[ui.md.id].label=$('#lb').value.trim();ui.md=null;save()}
+else if(a=='lbsave'){const id=ui.md.id,mm=S.meta[id],raw=nd($('#lb').value),mt=raw.match(/^(?:غرفة|غرفه|room|rm)?\s*#?\s*(\d+)$/i),n=mt?String(+mt[1]):'';
+if(mm){if(n&&secs().some(q=>+n>=q[0]&&+n<=q[1])){const tg=Object.keys(S.tables).find(x=>x!=id&&(S.meta[x]||{}).table==n&&!(S.meta[x]||{}).void);if(tg){S.tables[tg]=S.tables[tg].concat(S.tables[id]);delete S.tables[id];delete S.meta[id];delete S.pays[id];if(ui.table==id)ui.table=tg}else{mm.table=n;mm.label='غرفة '+n}toast('الطلب في غرفة '+n)}else{mm.label=$('#lb').value.trim()}}ui.md=null;save()}
 else if(a=='odel'){if(ui.cf){const id=ui.md.id;delete S.tables[id];delete S.pays[id];delete S.meta[id];ui.md=null;ui.cf=0;if(ui.table==id)ui.view='home';save()}else ui.cf=1}
 else if(a=='pay'){if(v)ui.table=v;ui.n=1;ui.rerr=0;ui.md={t:'pay'}}
 else if(a=='paid'){let room='';if(v=='room'){room=($('#rm').value||'').trim();if(!room){ui.rerr=1;render();return}}const t=sum(l),ps=S.pays[ui.table]||(S.pays[ui.table]=[]),rem=t.tot-ps.reduce((x,y)=>x+y.amount,0),n=ui.n||1;ps.push(Object.assign({method:v,amount:n>1?Math.round(rem/n*100)/100:rem},room?{room}:{}));ui.n=Math.max(1,n-1);if(t.tot-ps.reduce((x,y)=>x+y.amount,0)<0.01){const rm=(ps.find(x=>x.room)||{}).room,sale={id:Date.now(),time:Date.now(),table:lab(ui.table),room:rm,user:(ui.user||{}).name||'',total:t.tot,pays:ps,items:l.filter(i=>!i.void).map(i=>({name:i.name,qty:i.qty,price:i.price})),voids:l.filter(i=>i.void).map(i=>({name:i.name,qty:i.qty,price:i.price,reason:i.reason}))};S.sales.push(sale);if(DB)DB.collection('sales').add({time:sale.time,j:JSON.stringify(sale)}).catch(()=>{});delete S.tables[ui.table];delete S.meta[ui.table];delete S.pays[ui.table];ui.md={t:'rc',s:sale};ui.n=1;ui.view='home'}save()}
@@ -591,7 +616,7 @@ else if(a=='nu'){ui.n=(ui.n||1)+1}
 else if(a=='nd'){ui.n=Math.max(1,(ui.n||1)-1)}
 else if(a=='per'){ui.per=v}
 else if(a=='inv'){const s=S.sales.find(x=>x.id==+v);if(s)ui.md={t:'rc',s}}
-else if(a=='login'){const u=staffList().find(x=>x.name.toLowerCase()==$('#usr').value.trim().toLowerCase()&&x.pin==$('#pin').value.trim());if(u){ui.user=u;ui.err=0;try{localStorage.setItem('pos-u',JSON.stringify(u))}catch(e){}}else ui.err=1}
+else if(a=='login'){const u=staffList().find(x=>nu(x.name)==nu($('#usr').value)&&nd(x.pin)==nd($('#pin').value));if(u){ui.user=u;ui.err=0;try{localStorage.setItem('pos-u',JSON.stringify(u))}catch(e){}}else ui.err=1}
 else if(a=='logout'){ui.user=null;ui.tab='order';try{localStorage.removeItem('pos-u')}catch(e){}}
 else if(a=='staffsave'){S.staff=$('#stf').value;save()}
 else if(a=='prt'){try{window.print()}catch(x){}return}
@@ -662,6 +687,7 @@ async function savePDF(s){const st=$('#pm');try{const c=rcCanvas(s),b=atob(c.toD
 const d=DL;if(!d){st.textContent='الحفظ غير متاح هنا. استخدم الطباعة ثم اختر «حفظ كـ PDF».';return}
 await d.save({filename:'invoice-'+(s.id%100000)+'.pdf',data:mkPDF(j,c.width,c.height)});st.textContent='تم'}catch(e){st.textContent=e&&e.code=='declined'?'تم الإلغاء':'تعذّر الحفظ'}}
 const staffList=()=>S.staff.split('\n').map(l=>l.trim().split(':')).filter(a=>a.length>=3).map(a=>({name:a[0],pin:a[1].trim(),role:a[2].trim()}));
+const nd=s=>String(s==null?'':s).trim().replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/[۰-۹]/g,c=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(c)),nu=s=>nd(s).toLowerCase();
 function vLogin(){return`<div class="box" style="max-width:340px;margin:40px auto;text-align:center"><b>تسجيل الدخول</b><input id="usr" placeholder="اسم المستخدم" autocomplete="username" style="margin-top:10px"><input id="pin" type="password" placeholder="كلمة المرور" autocomplete="current-password" style="margin-top:8px">${ui.err?'<p style="color:var(--bad)">بيانات الدخول غير صحيحة</p>':''}<div class="btns"><button class="btn" data-act="login">دخول</button></div></div>`}
 document.addEventListener('input',e=>{if(e.target.id=='qs'){ui.q=e.target.value;render();const x=$('#qs');x.focus();x.setSelectionRange(x.value.length,x.value.length)}});
 document.addEventListener('keydown',e=>{if(e.key=='Enter'&&(e.target.id=='pin'||e.target.id=='usr'))document.querySelector('[data-act=login]').click()});
